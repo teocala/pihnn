@@ -1,0 +1,25 @@
+[tool.setuptools]
+packages = ["pihnn"]
+
+[build-system]
+requires = ["setuptools>=65", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pihnn"
+authors = [
+    {name = "Matteo Calafa'", email = "maca@mpe.au.dk"}
+]
+description = "Physics-informed holomorphic neural networks"
+version = "1.0.0"
+readme = "README.md"
+license = {text = "LGPL-2.1"}
+requires-python = ">=3.10"
+
+dependencies = [
+    "tqdm",
+    "matplotlib>=3.5.0",
+    "numpy>=1.22.0",
+    "torch>=1.11.0",
+    "scipy>=1.9.0"
+]

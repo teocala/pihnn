@@ -1,0 +1,13 @@
+name: pihnn-env
+
+dependencies:
+  - pip
+  - conda-build
+  - conda-verify
+  - sphinx
+  - sphinx-rtd-theme
+  - tqdm
+  - matplotlib>=3.5.0
+  - numpy>=1.22.0
+  - pytorch>=1.11.0
+  - scipy>=1.9.0

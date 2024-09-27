@@ -1,0 +1,21 @@
+# Python cache files
+*__pycache__
+
+# Plots
+*.png
+*.jpg
+*.eps
+*.pdf
+
+# Saved models
+*.dict
+*.dat
+!requirements.txt
+
+# Python distribution 
+dist/*
+*.egg-info
+build/*
+
+# Documentation
+docs/_*
