@@ -3,7 +3,7 @@ PIHNN 1.0.0
 
 This library provides the implementation of physics-informed holomorphic neural networks for the Laplace, biharmonic and plane linear elasticity equations.
 
-You can read about PIHNNs in `Calafà et al. [2024] <https://arxiv.org/abs/2407.01088>`_.
+You can read about PIHNNs in `Calafà et al. [2024] <https://www.sciencedirect.com/science/article/pii/S0045782524006613>`_.
 
 Then, before using the library, we recommend to read here the documentation and look at some applications in the ``examples`` folder.
 
@@ -63,14 +63,15 @@ If you use the library, don't forget to cite our work:
 
 .. code-block:: bib
 
-   @misc{calafa2024,
-         title={Physics-Informed Holomorphic Neural Networks {(PIHNNs)}: Solving Linear Elasticity Problems}, 
-         author={Matteo Calafà and Emil Hovad and Allan P. Engsig-Karup and Tito Andriollo},
-         year={2024},
-         eprint={2407.01088},
-         archivePrefix={arXiv},
-         primaryClass={cs.CE},
-         url={https://arxiv.org/abs/2407.01088}, 
+   @article{CALAFA2024117406,
+         title = {Physics-Informed Holomorphic Neural Networks ({PIHNNs}): Solving {2D} linear elasticity problems},
+         author = {Matteo Calafà and Emil Hovad and Allan P. Engsig-Karup and Tito Andriollo},
+         journal = {Computer Methods in Applied Mechanics and Engineering},
+         volume = {432},
+         pages = {117406},
+         year = {2024},
+         issn = {0045-7825},
+         doi = {https://doi.org/10.1016/j.cma.2024.117406}
    }
 
 License

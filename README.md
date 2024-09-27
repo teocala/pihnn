@@ -4,7 +4,7 @@ Physics-Informed Holomorphic Neural Networks (PIHNNs)
 <a href="https://github.com/teocala/pihnn/actions"><img src="https://github.com/teocala/pihnn/actions/workflows/actions.yml/badge.svg" /></a>
 <a href="https://github.com/teocala/pihnn"><img src="https://matteocalafa.com/badges/PIHNN-version.svg" /></a>
 <a href="https://matteocalafa.com/PIHNN"><img src="https://matteocalafa.com/badges/PIHNN-doc.svg" /></a>
-<a href="https://arxiv.org/abs/2407.01088"><img src="https://matteocalafa.com/badges/PIHNN-cite.svg" /></a>
+<a href="https://www.sciencedirect.com/science/article/pii/S0045782524006613"><img src="https://matteocalafa.com/badges/PIHNN-cite.svg" /></a>
 <a href="https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"><img src="https://matteocalafa.com/badges/PIHNN-license.svg" /></a>
 </p>
 
@@ -14,7 +14,7 @@ Author: [Matteo Calafà](https://matteocalafa.com/), research assistant at [Aarh
 
 Documentation
 --------------
-You can read about PIHNNs in our [arXiv preprint](https://arxiv.org/abs/2407.01088).  
+You can read about PIHNNs in our [paper](https://www.sciencedirect.com/science/article/pii/S0045782524006613).  
 Furthermore, see [here](https://matteocalafa.com/PIHNN) the documentation of the library.
 
 Installation
@@ -48,14 +48,15 @@ Citation
 ---------
 If you use the library, please cite our work:
 ```
-@misc{calafà2024,
-      title={Physics-Informed Holomorphic Neural Networks (PIHNNs): Solving Linear Elasticity Problems}, 
-      author={Matteo Calafà and Emil Hovad and Allan P. Engsig-Karup and Tito Andriollo},
-      year={2024},
-      eprint={2407.01088},
-      archivePrefix={arXiv},
-      primaryClass={cs.CE},
-      url={https://arxiv.org/abs/2407.01088}, 
+@article{CALAFA2024117406,
+      title = {Physics-Informed Holomorphic Neural Networks ({PIHNNs}): Solving {2D} linear elasticity problems},
+      author = {Matteo Calafà and Emil Hovad and Allan P. Engsig-Karup and Tito Andriollo},
+      journal = {Computer Methods in Applied Mechanics and Engineering},
+      volume = {432},
+      pages = {117406},
+      year = {2024},
+      issn = {0045-7825},
+      doi = {https://doi.org/10.1016/j.cma.2024.117406}
 }
 ```
 Tests conducted in the paper are also available in the `examples` folder.
