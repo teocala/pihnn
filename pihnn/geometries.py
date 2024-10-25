@@ -50,6 +50,8 @@ class boundary():
         self.length = 0.
         self.bc_types = []
         self.bc_names = []
+        length_fixed_sampling = 0.
+        cumulative_sampling_ratio = 0.
 
         for curve in curves:
             if not isinstance(curve.bc_type, bc.stress_bc): # I.e., we also need to compute displacements
@@ -66,6 +68,16 @@ class boundary():
             if curve.bc_name not in self.bc_names:
                 self.bc_names.append(curve.bc_name)
                 self.bc_types.append(curve.bc_type)
+
+            if curve.sampling_ratio is not None:
+                length_fixed_sampling += curve.length
+                cumulative_sampling_ratio += curve.sampling_ratio
+
+        if cumulative_sampling_ratio >= 1 + 1e-10:
+            raise ValueError("Sum of 'sampling_ratio' in curves must be between 0 and 1.")
+        for curve in self.curves:
+            if curve.sampling_ratio is None:
+                curve.sampling_ratio = curve.length*(1-cumulative_sampling_ratio)/(self.length-length_fixed_sampling)
 
         if self.multi_connected and dd_partition is None:
             raise ValueError("The domain is multiply-connected and is missing a domain partitioning.")
@@ -113,7 +125,7 @@ class boundary():
             if (curve == self.curves[-1]):
                 n = N - n0 # Divisions could lead to leftover points, so in this way we are sure that all the points are considered.
             else:
-                n = int(N * curve.length / self.length) # Number of points for each curve is proportional to the length of the curve with respect to the total perimeter.
+                n = int(N * curve.sampling_ratio)
             if (curve.ref_loc=="center"):
                 seed = 0.5 + (0.5-torch.bernoulli(0.5*torch.ones(n)))*torch.pow(torch.rand(n), 1./curve.order)
             elif (curve.ref_loc=="start"):
@@ -300,7 +312,7 @@ class curve():
     """
     Portion of boundary, identified with a shape and a type of boundary condition (BC). 
     """
-    def __init__(self, bc_type, bc_value=0, order=1, ref_loc="center", check_consistency=True, on_boundary=True):
+    def __init__(self, bc_type, bc_value=0, order=1, ref_loc="center", check_consistency=True, on_boundary=True, sampling_ratio=None):
         """
         :param bc_type: Type of boundary condition to assign to the curve (see above).
         :type bc_type: int
@@ -314,6 +326,8 @@ class curve():
         :type check_consistency: bool
         :param on_boundary: Set to False if the current curve is not really part of the domain boundary.
         :type on_boundary: bool
+        :param sampling_ratio: Number of sampled points on the curve with respect to the total sampled points on the boundary. By default, it's the ratio between the curve length and the boundary perimeter.
+        :type sampling_ratio: float
         """
         self.length = None
         self.square = None
@@ -325,6 +339,7 @@ class curve():
         self.bc_value = utils.get_complex_function(bc_value)
         self.check_consistency = check_consistency
         self.on_boundary = on_boundary
+        self.sampling_ratio = sampling_ratio
 
         if isinstance(order, (int,float)):
             if order > 1e-10:
@@ -389,7 +404,7 @@ class line(curve): # Straight line, anti-clockwise with respect to boundary
         \gamma:=\{z \in \mathbb{C}: z=tP_1 + (1-t)P_2 \\text{ for some } t\in[0,1]\}.
 
     """
-    def __init__(self, P1, P2, bc_type, bc_value=0, order=1, ref_loc="center", check_consistency=True, on_boundary=True):
+    def __init__(self, P1, P2, bc_type, bc_value=0, order=1, ref_loc="center", check_consistency=True, on_boundary=True, sampling_ratio=None):
         """
         :param P1: First edge of the line.
         :type P1: int/float/complex/list/tuple/:class:`torch.tensor`
@@ -407,8 +422,10 @@ class line(curve): # Straight line, anti-clockwise with respect to boundary
         :type check_consistency: bool
         :param on_boundary: Set to False if the current curve is not really part of the domain boundary.
         :type on_boundary: bool
+        :param sampling_ratio: Number of sampled points on the curve with respect to the total sampled points on the boundary. By default, it's the ratio between the curve length and the boundary perimeter.
+        :type sampling_ratio: float
         """
-        super(line, self).__init__(bc_type, bc_value, order, ref_loc, check_consistency, on_boundary)
+        super(line, self).__init__(bc_type, bc_value, order, ref_loc, check_consistency, on_boundary, sampling_ratio)
         self.P1 = utils.get_complex_input(P1)
         self.P2 = utils.get_complex_input(P2)
         self.length = torch.abs(self.P2-self.P1)
@@ -417,7 +434,7 @@ class line(curve): # Straight line, anti-clockwise with respect to boundary
 
     def map_point(self, s): # s in [0,1]
         point = self.P1 + s * (self.P2 - self.P1)
-        normal = self.orientation * 1.j * (self.P2-self.P1) / self.length # Clockwise or anti-clockwise rotation of 90 degrees
+        normal = self.orientation * 1.j * (self.P2-self.P1) / self.length + 0*point # Clockwise or anti-clockwise rotation of 90 degrees
         return point, normal
     
 
@@ -454,7 +471,7 @@ class arc(curve): # Arc of circumference, anti-clockwise with respect to boundar
     where :math:`c\in\mathbb{C}` is the center of the circle, :math:`r\in\mathbb{R}` the radius and :math:`\\theta_1,\\theta_2\in\mathbb{R}` the angles corresponding to the two ends.
 
     """
-    def __init__(self, center, radius, theta1, theta2, bc_type, bc_value=0, order=1, ref_loc="center", check_consistency=True, on_boundary=True):
+    def __init__(self, center, radius, theta1, theta2, bc_type, bc_value=0, order=1, ref_loc="center", check_consistency=True, on_boundary=True, sampling_ratio=None):
         """
         :param center: Center of the circle.
         :type center: int/float/complex/list/tuple/:class:`torch.tensor`
@@ -476,8 +493,10 @@ class arc(curve): # Arc of circumference, anti-clockwise with respect to boundar
         :type check_consistency: bool
         :param on_boundary: Set to False if the current curve is not really part of the domain boundary.
         :type on_boundary: bool
+        :param sampling_ratio: Number of sampled points on the curve with respect to the total sampled points on the boundary. By default, it's the ratio between the curve length and the boundary perimeter.
+        :type sampling_ratio: float
         """
-        super(arc, self).__init__(bc_type, bc_value, order, ref_loc, check_consistency, on_boundary)
+        super(arc, self).__init__(bc_type, bc_value, order, ref_loc, check_consistency, on_boundary, sampling_ratio)
         self.center = utils.get_complex_input(center)
         self.radius = torch.tensor(radius)
         self.theta1 = torch.tensor(theta1)
@@ -564,7 +583,7 @@ class circle(arc):
     where :math:`c\in\mathbb{C}` is the center of the circle and :math:`r\in\mathbb{R}` the radius.
 
     """
-    def __init__(self, center, radius, bc_type, bc_value=0, order=1, ref_loc="center", check_consistency=True, on_boundary=True):
+    def __init__(self, center, radius, bc_type, bc_value=0, order=1, ref_loc="center", check_consistency=True, on_boundary=True, sampling_ratio=None):
         """
         :param center: Center of the circle.
         :type center: complex / list with size 2 / :class:`torch.tensor` with size 2
@@ -582,5 +601,7 @@ class circle(arc):
         :type check_consistency: bool
         :param on_boundary: Set to False if the current curve is not really part of the domain boundary.
         :type on_boundary: bool
+        :param sampling_ratio: Number of sampled points on the curve with respect to the total sampled points on the boundary. By default, it's the ratio between the curve length and the boundary perimeter.
+        :type sampling_ratio: float
         """
-        super(circle, self).__init__(center, radius, 0, 2*torch.pi, bc_type, bc_value, order, ref_loc, check_consistency, on_boundary)
+        super(circle, self).__init__(center, radius, 0, 2*torch.pi, bc_type, bc_value, order, ref_loc, check_consistency, on_boundary, sampling_ratio)
