@@ -319,27 +319,27 @@ def compute_Lp_error(triangulation, model, model_true, p=2):
     :returns: **errors** (list of float) - Approximated :math:`L^p` error for each variable of interest.
      """
 
-    z = torch.tensor(triangulation.x + 1.j*triangulation.y).to(nn.device)
-    if len(inspect.getfullargspec(model_true)[0]) == 1: # Check if it's a scalar complex function
-        vars_true = model_true(z.cpu())
-    elif len(inspect.getfullargspec(model_true)[0]) == 2: # Check if it's a function with two scalar inputs
-        vars_true = model_true(z.real.cpu(), z.imag.cpu())
-    else:
-        raise ValueError("'model_true' must be a function with a scalar complex input or 2D real inputs.")
+    z = torch.tensor(triangulation.x + 1.j*triangulation.y).to(nn.device).requires_grad_(True)
 
-    if torch.is_complex(model(z)): # Which means that the model already provides the real-valued variables of interest
-        vars = model(z).detach().cpu()
-        vars = vars.split(1,dim=0)
+    if isinstance(model, nn.PIHNN):
+        vars = model(z, real_output=True).detach().cpu()
     else:
-        if (model.PDE=='laplace'):
-            vars = [torch.real(model(z)[0]).detach().cpu()]
-        elif (model.PDE=='biharmonic'):
-            phi, psi = model(z).cpu()
-            vars = [torch.real((torch.conj(z))*phi + psi).detach().cpu()]
-        elif (model.PDE=='km'):
-            vars = model(z, real_output=True)
-        elif (model.PDE=='km-so'):
-            vars = model(z, real_output=True)[0:3]
+        if len(inspect.getfullargspec(model)[0]) == 1: # Check if it's a scalar complex function
+            vars = model(z.detach().cpu())
+        elif len(inspect.getfullargspec(model)[0]) == 2: # Check if it's a function with two scalar inputs
+            vars = model(z.real.detach().cpu(), z.imag.detach().cpu())
+        else:
+            raise ValueError("'model' must be a function with a scalar complex input or 2D real inputs.")
+
+    if isinstance(model_true, nn.PIHNN):
+        vars_true = model_true(z, real_output=True).detach().cpu()
+    else:
+        if len(inspect.getfullargspec(model_true)[0]) == 1: # Check if it's a scalar complex function
+            vars_true = model_true(z.detach().cpu())
+        elif len(inspect.getfullargspec(model_true)[0]) == 2: # Check if it's a function with two scalar inputs
+            vars_true = model_true(z.real.detach().cpu(), z.imag.detach().cpu())
+        else:
+            raise ValueError("'model_true' must be a function with a scalar complex input or 2D real inputs.")
 
     errors = []    
     for i in range(min(len(vars),len(vars_true))):

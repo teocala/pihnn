@@ -149,33 +149,29 @@ def plot_scalar(triangulation, model, model_true=None, format="png", dir="result
     :type split: bool
     """
 
-    z = torch.tensor(triangulation.x + 1.j*triangulation.y).to(nn.device)
-    if isinstance(model, torch.nn.Module):
-        if (model.PDE=='laplace'):
-            u = torch.real(model(z)[0])
-        elif (model.PDE=='biharmonic'):
-            phi, psi = model(z)
-            u = torch.real((torch.conj(z))*phi + psi)
-        else:
-            raise ValueError("'plot_scalar' must be used only for 'laplace' and 'biharmonic' problems.")
+    z = torch.tensor(triangulation.x + 1.j*triangulation.y).to(nn.device).requires_grad_(True)
+    if isinstance(model, nn.PIHNN):
+        u = model(z, real_output=True).detach().cpu()
     else:
         if len(inspect.getfullargspec(model)[0]) == 1:
-            u = torch.real(model(z))
+            u = torch.real(model(z.detach().cpu()))
         elif len(inspect.getfullargspec(model)[0]) == 2:
-            u = torch.real(model(z.real,z.imag))
+            u = torch.real(model(z.real.detach().cpu(),z.imag.detach().cpu()))
         else:
             raise ValueError("'model' must accept 1 complex input or 2 real inputs.")
-    u = u.detach().cpu()
-    z = z.detach().cpu()
+
     if (model_true is not None):
-        if len(inspect.getfullargspec(model_true)[0]) == 1:
-            u_true = torch.real(model_true(z))
-        elif len(inspect.getfullargspec(model_true)[0]) == 2: 
-            u_true = torch.real(model_true(z.real,z.imag))
+        if isinstance(model_true, nn.PIHNN):
+            u_true = model_true(z, real_output=True).detach().cpu()
         else:
-            raise ValueError("'model_true' must accept 1 complex input or 2 real inputs.")
-        u_true = u_true.cpu()
+            if len(inspect.getfullargspec(model_true)[0]) == 1:
+                u_true = torch.real(model_true(z.detach().cpu()))
+            elif len(inspect.getfullargspec(model_true)[0]) == 2: 
+                u_true = torch.real(model_true(z.real.detach().cpu(),z.imag.detach().cpu()))
+            else:
+                raise ValueError("'model_true' must accept 1 complex input or 2 real inputs.")
         levels = np.linspace(torch.min(torch.minimum(u,u_true)),torch.max(torch.maximum(u,u_true)),50)
+
     dir0 = dir[:len(dir)-len(dir.partition("/")[-1])]
     if not os.path.exists(dir0):
         os.mkdir(dir0)
@@ -243,32 +239,32 @@ def plot_stresses(triangulation, model, model_true=None, format="png", dir="resu
     """
 
     z = torch.tensor(triangulation.x + 1.j*triangulation.y).to(nn.device).requires_grad_(True)
-    if isinstance(model, torch.nn.Module):
-        vars_NN = model(z, real_output=True)
+    if isinstance(model, nn.PIHNN):
+        vars_NN = model(z, real_output=True).detach().cpu()
     else:
         if len(inspect.getfullargspec(model)[0]) == 1:
-            vars_NN = model(z).detach()
+            vars_NN = model(z.detach().cpu())
         elif len(inspect.getfullargspec(model)[0]) == 2:
-            vars_NN = model(z.real, z.imag)
+            vars_NN = model(z.real.detach().cpu(), z.imag.detach().cpu())
         else:
             raise ValueError("'model' must accept 1 complex input or 2 real inputs.")
-    vars_NN = vars_NN.detach().cpu()
-    z = z.detach().cpu()
-    if(model_true is not None):
-        if len(inspect.getfullargspec(model_true)[0]) == 1:
-            vars_true = model_true(z)
-        elif len(inspect.getfullargspec(model_true)[0]) == 2:
-            vars_true = model_true(z.real, z.imag)
+    nv = vars_NN.shape[0]
+
+    if model_true is not None:
+        if isinstance(model_true, nn.PIHNN):
+            vars_true = model_true(z, real_output=True).detach().cpu()
         else:
-            raise ValueError("'model_true' must accept 1 complex input or 2 real inputs.")
-        try:
-            nv = vars_true.shape[0]
-        except:
-            raise ValueError("The output of 'model_true' must be a tensor.")
-        if nv not in [3,5]:
-            raise ValueError("'model_true' must return either 'sigma_xx,sigma_yy,sigma_xy,u_x,u_y' or 'sigma_xx,sigma_yy,sigma_xy'.")
-    else:
-        nv = 5
+            if len(inspect.getfullargspec(model_true)[0]) == 1:
+                vars_true = model_true(z.detach().cpu())
+            elif len(inspect.getfullargspec(model_true)[0]) == 2:
+                vars_true = model_true(z.real.detach().cpu(), z.imag.detach().cpu())
+            else:
+                raise ValueError("'model' must accept 1 complex input or 2 real inputs.")
+        nv = min(nv, vars_true.shape[0])
+
+    if nv not in [3,5]:
+        raise ValueError("Models must return either 'sigma_xx,sigma_yy,sigma_xy,u_x,u_y' or 'sigma_xx,sigma_yy,sigma_xy'.")
+
     dir0 = dir[:len(dir)-len(dir.partition("/")[-1])]
     if not os.path.exists(dir0):
         os.mkdir(dir0)
