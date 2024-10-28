@@ -184,11 +184,8 @@ def scalar_loss(boundary, model, t):
     else:
         z, normals, bc_idxs, bc_values = boundary(t)
 
-    z.requires_grad = True
-    if model.PDE == 'laplace':
-        u = torch.real(model(z))[0]
-    elif model.PDE == 'biharmonic':
-        u = torch.real(torch.conj(z)*model(z)[0] + model(z)[1]) # Goursat representation of biharmonic functions
+    if model.PDE in ['laplace','biharmonic']:
+        u = model(z.requires_grad_(True), real_output=True)
     else:
         raise ValueError("'model.PDE' must be 'laplace' or 'biharmonic' for this type of loss.")
 
@@ -223,7 +220,7 @@ def km_loss(boundary, model, t):
     else:
         z, normals, bc_idxs, bc_values = boundary(t)
     
-    vars = kolosov_transformation(z, model)
+    vars = model(z.requires_grad_(True), real_output=True)
 
     if isinstance(model, nn.DD_PIHNN):
         vars[:,twins[0],twins[2]] -= vars[:,twins[1],twins[3]]
@@ -237,41 +234,6 @@ def km_loss(boundary, model, t):
         L += MSE(bc_type(z, sig_xx, sig_yy, sig_xy, u_x, u_y, normals, bc_values)[bc_idxs==j])
     bc.reset_variables()
     return L / z.nelement()
-
-
-def kolosov_transformation(z, model):
-    """
-    Compute stresses and displacements from the output of the network through the Kolosov-Muskhelishvili representation.
-
-    :params z: Input of the model, typically a batch of coordinates from the domain boundary.
-    :type z: :class:`torch.tensor`
-    :param model: Neural network model, the function is meaningful only if model.PDE is either 'km' or 'km-so'.
-    :type model: :class:`pihnn.nn.PIHNN`/:class:`pihnn.nn.DD_PIHNN`
-    :returns: **vars** (:class:`torch.tensor`) - Tensor containing, in order, :math:`\sigma_{xx},\sigma_{yy},\sigma_{xy},u_x,u_y` evaluated in :math:`z`.
-    """
-    z.requires_grad = True
-    phi, psi = model(z)
-    if (model.PDE=='km'): # Normal configuration
-        phi_z = derivative(phi,z,holom=True)
-        psi_z = derivative(psi,z,holom=True)
-        tmp = model.material["km_gamma"] * phi - z * torch.conj(phi_z) - torch.conj(psi)
-        u_x = torch.real(tmp) / (2*model.material["mu"])
-        u_y = torch.imag(tmp) / (2*model.material["mu"])
-    elif (model.PDE=='km-so'): # Stress-only configuration
-        phi_z = phi
-        psi_z = psi
-        u_x = 0.*torch.abs(phi_z)
-        u_y = 0.*torch.abs(psi_z)
-    else:
-        raise ValueError("'model.PDE' must be either 'km' or 'km-so' for calculating stresses.")
-    phi_zz = derivative(phi_z,z,holom=True)
-    tmp1 = 2*torch.real(phi_z)
-    tmp2 = torch.conj(z)*phi_zz + psi_z
-    sig_xx = tmp1 - torch.real(tmp2)
-    sig_yy = tmp1 + torch.real(tmp2)
-    sig_xy = torch.imag(tmp2)
-    vars = torch.stack([sig_xx,sig_yy,sig_xy,u_x,u_y],0)
-    return vars
 
 
 def train(boundary, model, n_epochs, learn_rate=1e-3, scheduler_apply=[], scheduler_gamma=0.5, dir="results/"):
@@ -375,9 +337,9 @@ def compute_Lp_error(triangulation, model, model_true, p=2):
             phi, psi = model(z).cpu()
             vars = [torch.real((torch.conj(z))*phi + psi).detach().cpu()]
         elif (model.PDE=='km'):
-            vars = kolosov_transformation(z, model)
+            vars = model(z, real_output=True)
         elif (model.PDE=='km-so'):
-            vars = kolosov_transformation(z, model)[0:3]
+            vars = model(z, real_output=True)[0:3]
 
     errors = []    
     for i in range(min(len(vars),len(vars_true))):

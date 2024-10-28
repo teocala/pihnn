@@ -1,5 +1,5 @@
 """
-Test from Section 4.2.3 in https://arxiv.org/abs/2407.01088
+Test from Section 4.2.3 in https://doi.org/10.1016/j.cma.2024.117406
 """
 
 import os

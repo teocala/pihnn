@@ -3,6 +3,7 @@
 import torch
 import math, warnings
 import numpy as np
+import pihnn.utils as utils
 torch.set_default_dtype(torch.float64) # This also implies default complex128. It applies to all scripts of the library
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') # Shared with other scripts of the library
 
@@ -53,7 +54,7 @@ class ComplexLinear(torch.nn.Module):
             \\text{Re}(w),\\text{Im}(w) &\sim \mathcal{N}\left(0,\\frac{\\texttt{scaling}}{2 \\texttt{in_features}}\\right), \\\\
             bias &=0.
 
-        This allows us to easily include the initialization strategy from `Calafà et al. [2024] <https://arxiv.org/abs/2407.01088>`_, Section 3.2.4.
+        This allows us to easily include the initialization strategy from `Calafà et al. [2024] <https://doi.org/10.1016/j.cma.2024.117406>`_, Section 3.2.4.
         
         :param scaling: Scaling in the He initialization.
         :type scaling: float
@@ -149,16 +150,35 @@ class PIHNN(torch.nn.Module):
 
     Main class for the employment of physics-informed holomorphic neural networks (PIHNNs).
 
-    PIHNNs are able to solve 4 types of problems:
+    PIHNNs are able to solve 4 types of problems, where :math:`\\varphi,\psi` denote the holomorphic output(s) of the network:
 
-    * Laplace problem ('laplace'): 
-        :math:`\\nabla^2u=0 \\Leftrightarrow u=\\text{Re}(\\varphi)` where :math:`\\varphi` is a holomorphic function.
-    * Biharmonic problem with Goursat representation ('biharmonic'): 
-        :math:`\\nabla^4u=0 \\Leftrightarrow u=\\text{Re}((x-iy)\\varphi + \psi)` where :math:`\\varphi,\psi` are holomorphic functions.
-    * Linear elasticity with Kolosov-Muskhelishvili representation, standard ('km'): 
-        Stresses and displacements can be obtained from :math:`\\varphi,\psi`, see `Calafà et al. [2024] <https://arxiv.org/abs/2407.01088>`_, Section 3.2.2.
-    * Linear elasticity with Kolosov-Muskhelishvili representation, stress-only ('km-so'): 
-        Stresses can be obtained from :math:`\\varphi,\psi`, see `Calafà et al. [2024] <https://arxiv.org/abs/2407.01088>`_, Section 3.2.2.
+    * 2D Laplace problem ('laplace'): 
+        .. math::
+            \\nabla^2u=0 \\Leftrightarrow u=\\text{Re}(\\varphi).
+
+    * 2D biharmonic problem with Goursat representation ('biharmonic'): 
+        .. math::
+            \\nabla^4u=0 \\Leftrightarrow u=\\text{Re}((x-iy)\\varphi + \psi).
+
+    * 2D linear elasticity with Kolosov-Muskhelishvili representation ('km'):
+        :math:`\sigma_{xx},\sigma_{yy},\sigma_{xy},u_x,u_y` solve the 2D linear elasticity problem :math:`\\Leftrightarrow`
+
+        .. math::
+            \\begin{cases}
+            \sigma_{xx} + \sigma_{yy} = 4 \\text{Re}(\\varphi'),  \\\\
+            \sigma_{yy} - \sigma_{xx} + 2i\sigma_{xy} = (\overline{z}\\varphi''+\psi'),  \\\\
+            2\mu(u_x + iu_y) = \gamma \\varphi - z \overline{\\varphi'} - \overline{\psi},
+            \end{cases}
+
+        where :math:`\\mu` is the shear modulus and :math:`\gamma` is the Kolosov constant.
+    * 2D linear elasticity with Kolosov-Muskhelishvili representation, stress-only ('km-so'):
+        :math:`\sigma_{xx},\sigma_{yy},\sigma_{xy}` solve the 2D linear elasticity problem :math:`\\Leftrightarrow`
+
+        .. math::
+            \\begin{cases}
+            \sigma_{xx} + \sigma_{yy} = 4 \\text{Re}(\\varphi),  \\\\
+            \sigma_{yy} - \sigma_{xx} + 2i\sigma_{xy} = (\overline{z}\\varphi'+\psi).
+            \end{cases}
     
     The output of the network is therefore the scalar function :math:`\\varphi_{NN}\\approx\\varphi` in the Laplace problem. 
     Instead, for the other problems the PIHNN is composed by 2 stacked networks :math:`\\varphi_{NN},\psi_{NN}\\approx\\varphi,\psi`.
@@ -202,7 +222,7 @@ class PIHNN(torch.nn.Module):
             self.layers.append(ComplexLinear(self.n_outputs, units[i], units[i+1], has_bias=has_bias))
 
 
-    def forward(self, z):
+    def forward(self, z, real_output=False):
         """
         Forward step, i.e., compute for :math:`j=1,2`:
 
@@ -213,12 +233,18 @@ class PIHNN(torch.nn.Module):
 
         :param z: Input of the network, typically a batch of coordinates from the domain boundary.
         :type z: :class:`torch.tensor`
+        :param real_output: Whether to provide the output in the real-valued representation.
+        :type real_output: bool
         :returns: **phi** (:class:`torch.tensor`) - Output of the network. As mentioned above, it has the same shape of the input for the Laplace problem but double size for the other problems.
         """
         phi = self.layers[0](z)
         for i in range(1, self.n_layers):
             phi = self.layers[i](self.activation(phi))
-        return phi.squeeze(1)
+
+        if real_output:
+            return self.apply_real_transformation(z, phi.squeeze(1))
+        else:
+            return phi.squeeze(1)
 
 
     def initialize_weights(self, method, beta=0.5, sample=None, gauss=None):
@@ -230,7 +256,7 @@ class PIHNN(torch.nn.Module):
         * Scaled complex-valued He initialization:
             :math:`\\text{Re}(w),\\text{Im}(w)\sim \mathcal{N}\left(0,\\frac{\\texttt{scaling}}{2 \\texttt{in_features}}\\right), \hspace{3mm} bias=0`.
         * PIHNNs ad-hoc initialization with exponential activations:
-            See `Calafà et al. [2024] <https://arxiv.org/abs/2407.01088>`_, Section 3.2.4.
+            See `Calafà et al. [2024] <https://doi.org/10.1016/j.cma.2024.117406>`_, Section 3.2.4.
 
         :param method: Either 'he', 'he_scaled', 'exp', see description above.
         :type method: str
@@ -264,6 +290,54 @@ class PIHNN(torch.nn.Module):
             self.layers[i].init(scaling)
 
 
+    def apply_real_transformation(self, z, phi):
+        """
+        Based on the type of PDE, this method returns the real-valued output from the holomorphic potentials.
+        We address to the documentation of :class:`pihnn.nn.PIHNN` for the review of the 4 types of problems and their associated representation.
+        
+        For PDE = 'laplace' and 'biharmonic', :math:`u` is evaluated at :math:`z`. 
+        For PDE = 'km' and 'km-so',  :math:`\sigma_{xx},\sigma_{yy},\sigma_{xy},u_x,u_y` are stacked in a single tensor.
+        Finally, in 'km-so', :math:`u_x,u_y` are identically zero.
+        :params z: Input of the model, typically a batch of coordinates from the domain boundary.
+        :type z: :class:`torch.tensor`
+        :param phi: Complex-valued output of the network.
+        :type phi: :class:`torch.tensor`
+        :returns: **vars** (:class:`torch.tensor`) - Tensor containing the real-valued variable(s) evaluated at :math:`z`. 
+        """
+        match self.PDE:
+            case 'laplace':
+                return torch.real(phi)[0]
+            
+            case 'biharmonic':
+                return torch.real(torch.conj(z)*phi[0] + phi[1]) # Goursat representation of biharmonic functions
+            
+            case 'km' | 'km-so':
+                phi, psi = phi # The original "phi" actually includes both potentials
+                if (self.PDE=='km'): # Normal configuration
+                    phi_z = utils.derivative(phi,z,holom=True)
+                    psi_z = utils.derivative(psi,z,holom=True)
+                    tmp = self.material["km_gamma"] * phi - z * torch.conj(phi_z) - torch.conj(psi)
+                    u_x = torch.real(tmp) / (2*self.material["mu"])
+                    u_y = torch.imag(tmp) / (2*self.material["mu"])
+                elif (self.PDE=='km-so'): # Stress-only configuration
+                    phi_z = phi
+                    psi_z = psi
+                    u_x = 0.*torch.abs(phi_z)
+                    u_y = 0.*torch.abs(psi_z)
+                else:
+                    raise ValueError("'model.PDE' must be either 'km' or 'km-so' for calculating stresses.")
+                phi_zz = utils.derivative(phi_z,z,holom=True)
+                tmp1 = 2*torch.real(phi_z) 
+                tmp2 = torch.conj(z)*phi_zz + psi_z
+                sig_xx = tmp1 - torch.real(tmp2)
+                sig_yy = tmp1 + torch.real(tmp2)
+                sig_xy = torch.imag(tmp2)
+                return torch.stack([sig_xx,sig_yy,sig_xy,u_x,u_y],0)
+            
+            case _:
+                raise ValueError("model.PDE must be either 'laplace', 'biharmonic', 'km', 'km-so'.")
+
+
 
 class DD_PIHNN(PIHNN):
     """
@@ -271,7 +345,7 @@ class DD_PIHNN(PIHNN):
 
     Domain-decomposition physics-informed holomorphic neural networks (DD-PIHNNs).
 
-    DD-PIHNNs have been introduced in `Calafà et al. [2024] <https://arxiv.org/abs/2407.01088>`_, Section 4.3, to solve problems on multiply-connected domains.
+    DD-PIHNNs have been introduced in `Calafà et al. [2024] <https://doi.org/10.1016/j.cma.2024.117406>`_, Section 4.3, to solve problems on multiply-connected domains.
     The structure is similar to :class:`pihnn.nn.PIHNN` but includes multiple stacked networks, each one corresponding to each function :math:`\\varphi,\psi` and each domain.
     """
     def __init__(self, PDE, units, boundary, material={"lambda": 1, "mu": 1}, activation=torch.exp, has_bias=True):
@@ -301,7 +375,7 @@ class DD_PIHNN(PIHNN):
             raise ValueError("'stress-only' configuration cannot be applied to DD-PIHNNs.")
 
 
-    def forward(self, z, flat_output=True):
+    def forward(self, z, flat_output=True, real_output=False):
         """
         Forward step, i.e., compute for :math:`j=1,2`:
 
@@ -316,6 +390,8 @@ class DD_PIHNN(PIHNN):
             is the number of points per domain. The second option is necessary for the training of the network while one can simply consider a flat output in other circumstances. 
             Notice that the output is flat only if the input is also flat.
         :type flat_output: bool
+        :param real_output: Whether to provide the output in the real-valued representation.
+        :type real_output: bool
         :returns: **phi** (:class:`torch.tensor`) - Output of the network. It has the same shape of the input for the Laplace problem but double size for the other problems.
         """
 
@@ -330,14 +406,19 @@ class DD_PIHNN(PIHNN):
         phi = self.layers[0](z)
         for i in range(1, self.n_layers):
             phi = self.layers[i](self.activation(phi))
+        phi = phi.squeeze(2)
 
         if (flat_output and 'z_old' in locals()):
             flat_phi = torch.empty((self.n_outputs,)+z_old.shape, dtype=z_old.dtype)
             for d in range(self.n_domains): # We do the inverse of the previous operation
-                flat_phi[:,domains[d,:]] = phi[:,d,0,:domains[d,:].sum()]
-            return flat_phi
+                flat_phi[:,domains[d,:]] = phi[:,d,:domains[d,:].sum()]
+            phi = flat_phi
+            z = z_old
         
-        return phi.squeeze(2)
+        if real_output:
+            return self.apply_real_transformation(z, phi)
+        else:
+            return phi
 
 
     def initialize_weights(self, method, beta=0.5, sample=None, gauss=None):

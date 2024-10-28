@@ -4,8 +4,9 @@ PIHNN 1.0.0
 This library provides the implementation of physics-informed holomorphic neural networks for the Laplace, biharmonic and plane linear elasticity equations.
 
 You can read about PIHNNs in `Calafà et al. [2024] <https://www.sciencedirect.com/science/article/pii/S0045782524006613>`_.
+Alternatively, you can watch the `video <https://www.youtube.com/watch?v=37mDjIVfSho&t=1665s>`_ of our presentation at the CRUNCH seminar. 
 
-Then, before using the library, we recommend to read here the documentation and look at some applications in the ``examples`` folder.
+Before using the library, we recommend to read here the documentation and look at some applications in the ``examples`` folder.
 
 Installation
 -------------

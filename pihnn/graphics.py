@@ -242,9 +242,9 @@ def plot_stresses(triangulation, model, model_true=None, format="png", dir="resu
     :type split: bool
     """
 
-    z = torch.tensor(triangulation.x + 1.j*triangulation.y).to(nn.device)
+    z = torch.tensor(triangulation.x + 1.j*triangulation.y).to(nn.device).requires_grad_(True)
     if isinstance(model, torch.nn.Module):
-        vars_NN = utils.kolosov_transformation(z, model)
+        vars_NN = model(z, real_output=True)
     else:
         if len(inspect.getfullargspec(model)[0]) == 1:
             vars_NN = model(z).detach()

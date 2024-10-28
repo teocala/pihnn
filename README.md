@@ -14,8 +14,9 @@ Author: [Matteo Calafà](https://matteocalafa.com/), research assistant at [Aarh
 
 Documentation
 --------------
-You can read about PIHNNs in our [paper](https://www.sciencedirect.com/science/article/pii/S0045782524006613).  
-Furthermore, see [here](https://matteocalafa.com/PIHNN) the documentation of the library.
+Before using the library, we recommend to read about PIHNNs in our [paper](https://doi.org/10.1016/j.cma.2024.117406) and/or watch the [video](https://www.youtube.com/watch?v=37mDjIVfSho&t=1665s) of our presentation at the CRUNCH seminar.
+
+Furthermore, you find [here](https://matteocalafa.com/PIHNN) the full documentation!
 
 Installation
 -------------
