@@ -18,4 +18,4 @@ dist/*
 build/*
 
 # Documentation
-docs/_*
+docs/_build
