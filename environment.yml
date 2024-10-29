@@ -9,7 +9,7 @@ dependencies:
   - conda-build
   - conda-verify
   - sphinx
-  - sphinx-rtd-theme
+  - pydata-sphinx-theme
   - sphinx-autoapi
   - sphinxcontrib-youtube
   - tqdm
