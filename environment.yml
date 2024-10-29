@@ -1,11 +1,17 @@
 name: pihnn-env
 
+channels:
+  - anaconda
+  - conda-forge
+
 dependencies:
   - pip
   - conda-build
   - conda-verify
   - sphinx
   - sphinx-rtd-theme
+  - sphinx-autoapi
+  - sphinxcontrib-youtube
   - tqdm
   - matplotlib>=3.5.0
   - numpy>=1.22.0

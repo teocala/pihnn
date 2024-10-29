@@ -72,8 +72,6 @@ class linear_elasticity_bc():
 
 class dirichlet_bc(scalar_bc):
     """
-    Base: :class:`pihnn.nn.scalar_bc`
-    
     Dirichlet boundary condition: 
     
     .. math::
@@ -89,8 +87,6 @@ class dirichlet_bc(scalar_bc):
 
 class neumann_bc(scalar_bc):
     """
-    Base: :class:`pihnn.nn.scalar_bc`
-
     Neumann boundary condition: 
     
     .. math::
@@ -110,8 +106,6 @@ class neumann_bc(scalar_bc):
 
 class dirichlet_neumann_bc(scalar_bc):
     """
-    Base: :class:`pihnn.nn.scalar_bc`
-
     Dirichlet-Neumann boundary condition:
 
     .. math::
@@ -131,8 +125,6 @@ class dirichlet_neumann_bc(scalar_bc):
 
 class dirichlet_laplace_bc(scalar_bc):
     """
-    Base: :class:`pihnn.nn.scalar_bc`
-
     Dirichlet-Laplace boundary condition:
 
     .. math::
@@ -155,8 +147,6 @@ class dirichlet_laplace_bc(scalar_bc):
 
 class stress_bc(linear_elasticity_bc):
     """
-    Base: :class:`pihnn.nn.linear_elasticity_bc`
-
     Stress boundary condition:
 
     .. math::
@@ -174,8 +164,6 @@ class stress_bc(linear_elasticity_bc):
 
 class displacement_bc(linear_elasticity_bc):
     """
-    Base: :class:`pihnn.nn.linear_elasticity_bc`
-
     Displacement boundary condition:
 
     .. math::
@@ -191,8 +179,6 @@ class displacement_bc(linear_elasticity_bc):
 
 class symmetry_bc(linear_elasticity_bc):
     """
-    Base: :class:`pihnn.nn.linear_elasticity_bc`
-
     Symmetry boundary condition:
 
     .. math::
@@ -212,8 +198,6 @@ class symmetry_bc(linear_elasticity_bc):
 
 class normal_displacement_bc(linear_elasticity_bc):
     """
-    Base: :class:`pihnn.nn.linear_elasticity_bc`
-
     Normal displacement boundary condition:
 
     .. math::
@@ -230,8 +214,6 @@ class normal_displacement_bc(linear_elasticity_bc):
 
 class interface_bc(scalar_bc, linear_elasticity_bc):
     """
-    Base: :class:`pihnn.nn.scalar_bc`, :class:`pihnn.nn.linear_elasticity_bc`
-
     Interface condition for DD-PIHNNs. 
     
     For scalar problems:

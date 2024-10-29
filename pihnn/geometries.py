@@ -396,8 +396,6 @@ class curve():
 
 class line(curve): # Straight line, anti-clockwise with respect to boundary
     """
-    Base: :class:`pihnn.geometries.curve`
-
     Straight line between :math:`P_1,P_2 \in \mathbb{C}`, defined as:
 
     .. math::
@@ -461,8 +459,6 @@ class line(curve): # Straight line, anti-clockwise with respect to boundary
 
 class arc(curve): # Arc of circumference, anti-clockwise with respect to boundary
     """
-    Base: :class:`pihnn.geometries.curve`
-
     Arc of circle defined as:
 
     .. math::
@@ -573,8 +569,6 @@ class arc(curve): # Arc of circumference, anti-clockwise with respect to boundar
 
 class circle(arc):
     """
-    Base: :class:`pihnn.geometries.arc`
-
     Circle defined as:
 
     .. math::

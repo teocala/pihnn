@@ -1,10 +1,12 @@
-Physics-Informed Holomorphic Neural Networks (PIHNNs)
-====================================================
+<div align="center">
+<img src="https://matteocalafa.com/images/pihnn-logo.svg" width="500">
+</div>
+
 <p align="center">
 <a href="https://github.com/teocala/pihnn/actions"><img src="https://github.com/teocala/pihnn/actions/workflows/actions.yml/badge.svg" /></a>
 <a href="https://github.com/teocala/pihnn"><img src="https://matteocalafa.com/badges/PIHNN-version.svg" /></a>
 <a href="https://matteocalafa.com/PIHNN"><img src="https://matteocalafa.com/badges/PIHNN-doc.svg" /></a>
-<a href="https://www.sciencedirect.com/science/article/pii/S0045782524006613"><img src="https://matteocalafa.com/badges/PIHNN-cite.svg" /></a>
+<a href="https://doi.org/10.1016/j.cma.2024.117406"><img src="https://matteocalafa.com/badges/PIHNN-cite.svg" /></a>
 <a href="https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"><img src="https://matteocalafa.com/badges/PIHNN-license.svg" /></a>
 </p>
 
@@ -14,36 +16,8 @@ Author: [Matteo Calafà](https://matteocalafa.com/), research assistant at [Aarh
 
 Documentation
 --------------
-Before using the library, we recommend to read about PIHNNs in our [paper](https://doi.org/10.1016/j.cma.2024.117406) and/or watch the [video](https://www.youtube.com/watch?v=37mDjIVfSho&t=1665s) of our presentation at the CRUNCH seminar.
-
-Furthermore, you find [here](https://matteocalafa.com/PIHNN) the full documentation!
-
-Installation
--------------
-Clone the repository:
-```
-git clone https://github.com/teocala/pihnn.git
-```
-and move to the library main folder.  
-Optionally, we provide an Anaconda environment with all dependencies; activate it by running
-```
-conda env create -f environment.yml
-conda activate pihnn-env
-```
-Finally, install the library through pip:
-```
-pip install .
-```
-
-Getting started
----------------
-The `examples` folder contains some tests that can be easily run from command line.  
-For example, 
-```
-python3 examples/simply_connected/laplace.py
-```
-will run the test on the Laplace equation and provide plots in the `results` folder.
-
+Before using the library, we recommend to read about PIHNNs in our [paper](https://doi.org/10.1016/j.cma.2024.117406) and/or watch this [video](https://www.youtube.com/watch?v=37mDjIVfSho&t=1665s).
+Furthermore, you find [here](https://matteocalafa.com/PIHNN) the instructions for the installation and the full documentation!
 
 Citation
 ---------

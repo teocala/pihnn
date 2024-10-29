@@ -10,9 +10,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') # Shared w
 
 class ComplexLinear(torch.nn.Module):
     """
-    Base: :class:`torch.nn.Module`
-
-    Extension of :class:`torch.nn.Linear` to complex values. So, a complex linear layer performs the operation
+    Extension of :class:`torch.nn.Linear` to complex values. 
+    
+    So, a complex linear layer performs the operation
     
     .. math::
         y = Wx + b,
@@ -114,8 +114,6 @@ class ComplexLinear(torch.nn.Module):
 
 class ComplexParameter(torch.nn.Module):
     """
-    Base: :class:`torch.nn.Module`
-
     Extension of :class:`torch.nn.Parameter` to complex values. 
     """
     def __init__(self, minvalue=-1-1j, maxvalue=1+1j, in_features=1, out_features=1):
@@ -146,8 +144,6 @@ class ComplexParameter(torch.nn.Module):
 
 class PIHNN(torch.nn.Module):
     """
-    Base: :class:`torch.nn.Module`
-
     Main class for the employment of physics-informed holomorphic neural networks (PIHNNs).
 
     PIHNNs are able to solve 4 types of problems, where :math:`\\varphi,\psi` denote the holomorphic output(s) of the network:
@@ -341,8 +337,6 @@ class PIHNN(torch.nn.Module):
 
 class DD_PIHNN(PIHNN):
     """
-    Base: :class:`torch.nn.Module`
-
     Domain-decomposition physics-informed holomorphic neural networks (DD-PIHNNs).
 
     DD-PIHNNs have been introduced in `Calafà et al. [2024] <https://doi.org/10.1016/j.cma.2024.117406>`_, Section 4.3, to solve problems on multiply-connected domains.
