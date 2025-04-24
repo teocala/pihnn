@@ -20,13 +20,13 @@ beta = 0.5 # Initialization parameter
 gauss = 3 # Initalization parameter
 
 # Exact solution 
-def u_exact (x,y): return x*x - y*y
+def u_exact (x,y): return x*x - y*y + torch.exp(x)*torch.cos(y)
 
 # Geometry + boundary conditions
 L = 0.5 # Domain half length
-def bc_R (x,y): return 2*x # From u_exact
-def bc_L (x,y): return -2*x
-def bc_B (x,y): return 2*y
+def bc_R (x,y): return 2*x + torch.exp(x)*torch.cos(y) # From u_exact
+def bc_L (x,y): return -2*x - torch.exp(x)*torch.cos(y)
+def bc_B (x,y): return 2*y + torch.exp(x)*torch.sin(y)
 
 line1 = geom.line(P1=[L,L], P2=[-L,L], bc_type=bc.dirichlet_bc(), bc_value=u_exact)
 line2 = geom.line(P1=[-L,L], P2=[-L,-L], bc_type=bc.neumann_bc(), bc_value=bc_L)
@@ -35,7 +35,7 @@ line4 = geom.line(P1=[L,-L], P2=[L,L], bc_type=bc.neumann_bc(), bc_value=bc_R)
 boundary = geom.boundary([line1, line2, line3, line4], np_train, np_test)
 
 # Definition of NN
-model = nn.PIHNN('laplace', units).to(nn.device)
+model = nn.PIHNN('laplace', units)
 
 if (__name__=='__main__'):
     model.initialize_weights('exp', beta, boundary.extract_points(10*boundary.np_train)[0], gauss)

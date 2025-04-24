@@ -52,9 +52,19 @@ jobs:
           $CONDA/envs/pihnn-env/bin/python3 examples/multiply_connected/plate_hole_dd.py
           mv results/loss.dat results/loss5.dat
 
+      - name: Run straight_crack_williams.py
+        run: | 
+          $CONDA/envs/pihnn-env/bin/python3 examples/cracks/straight_crack_williams.py
+          mv results/loss.dat results/loss6.dat
+
+      - name: Run straight_crack_rice.py
+        run: | 
+          $CONDA/envs/pihnn-env/bin/python3 examples/cracks/straight_crack_rice.py
+          mv results/loss.dat results/loss7.dat
+
       - name: Print tests results 
         run: |
           $CONDA/envs/pihnn-env/bin/python3 -c "
           import numpy
-          exp = [1e-5, 1e-4, 5e-4, 2e-5, 1e-3]
-          for i in range(1,6): loss = numpy.loadtxt('results/loss'+str(i)+'.dat'); print('Loss test ' + str(i) + ': ' + str(numpy.min(loss[:,1])) + ' (expected < ' + str(exp[i-1]) + ')')"
+          exp = [1e-5, 1e-4, 5e-4, 2e-5, 1e-3, 1e-2, 1e-2]
+          for i in range(1,8): loss = numpy.loadtxt('results/loss'+str(i)+'.dat'); print('Loss test ' + str(i) + ': ' + str(numpy.min(loss[:,1])) + ' (expected < ' + str(exp[i-1]) + ')')"

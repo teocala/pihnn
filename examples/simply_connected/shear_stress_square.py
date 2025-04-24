@@ -38,7 +38,7 @@ vars_FE = scipy.interpolate.LinearNDInterpolator(list(zip(x_FE,y_FE)), vars_FE)
 def model_FE(x,y): return torch.tensor(vars_FE(x,y).T)
 
 # Definition of NN
-model = nn.PIHNN('km', units).to(nn.device)
+model = nn.PIHNN('km', units)
 
 if(__name__=='__main__'):
     model.initialize_weights('exp', beta, boundary.extract_points(10*np_train)[0], gauss)

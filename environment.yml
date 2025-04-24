@@ -5,7 +5,10 @@ channels:
   - conda-forge
 
 dependencies:
+  - python>=3.10
   - pip
+  - pip:
+      - torch --index-url https://download.pytorch.org/whl/cu12.4
   - conda-build
   - conda-verify
   - sphinx
@@ -15,5 +18,4 @@ dependencies:
   - tqdm
   - matplotlib>=3.5.0
   - numpy>=1.22.0
-  - pytorch>=1.11.0
   - scipy>=1.9.0

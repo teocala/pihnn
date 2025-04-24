@@ -13,7 +13,7 @@ import pihnn.utils as utils
 
 class boundary():
     """Main class for the definition of the domain boundary and boundary conditions (BCs)."""
-    def __init__(self, curves, np_train, np_test, dd_partition=None):
+    def __init__(self, curves, np_train, np_test, dd_partition=None, enrichment=None):
         """
         :param curves: List of :class:`pihnn.geometry.curve` which defines the domain boundary.
         :type curves: list
@@ -23,26 +23,27 @@ class boundary():
         :type np_test: int
         :param dd_partition: Domain decomposition rule, only for DD-PIHNNs.
         :type dd_partition: callable
+        :param enrichment: Crack enrichment method, either "williams" or "rice". Leave it to None for no enrichment.
+        :type enrichment: string
 
         An example of domain splitting for partitioning into the 4 quadrants is as follows
 
         .. code-block:: python
 
             def dd_partition (x,y): # Domain decomposition partition
-                domains = torch.empty([4,x.shape[0]], dtype=torch.bool)
-                domains[0,:] = (x>=-1e-10) & (y>=-1e-10)
-                domains[1,:] = (x<=1e-10) & (y>=-1e-10)
-                domains[2,:] = (x<=1e-10) & (y<=1e-10)
-                domains[3,:] = (x>=-1e-10) & (y<=1e-10)
-                return domains
+                return torch.stack([
+                (x>=-1e-10) & (y>=-1e-10),
+                (x<=1e-10) & (y>=-1e-10),
+                (x<=1e-10) & (y<=1e-10),
+                (x>=-1e-10) & (y<=1e-10),
+                ])
 
         .. note:: dd_partition must be in exactly the same format as the example: it must return a tensor with an additional dimension at position 0 and each domain must contain also shared interfaces (this is the reason for 1e-10).
         """
         self.curves = curves
-        self.adjust_orientation()
-        self.check_consistency()
         self.np_train = np_train
         self.np_test = np_test
+        self.enrichment = enrichment
         self.stress_only = True
         self.multi_connected = False
         self.dd_partition = None
@@ -50,10 +51,12 @@ class boundary():
         self.length = 0.
         self.bc_types = []
         self.bc_names = []
+        self.cracks = []
+
         length_fixed_sampling = 0.
         cumulative_sampling_ratio = 0.
 
-        for curve in curves:
+        for curve in self.curves:
             if not isinstance(curve.bc_type, bc.stress_bc): # I.e., we also need to compute displacements
                 self.stress_only = False
             if isinstance(curve.bc_type, bc.interface_bc): # I.e., domain decomposition
@@ -69,6 +72,15 @@ class boundary():
                 self.bc_names.append(curve.bc_name)
                 self.bc_types.append(curve.bc_type)
 
+            if len(curve.tips) != 0:
+                curve.on_boundary = False
+                if enrichment == "rice":
+                    curve.sampling_ratio = 0.
+                    self.curves.remove(curve)
+                    if not isinstance(curve, line):
+                        raise ValueError("Rice method only works for straight line cracks")
+                self.cracks.append(curve)
+
             if curve.sampling_ratio is not None:
                 length_fixed_sampling += curve.length
                 cumulative_sampling_ratio += curve.sampling_ratio
@@ -79,11 +91,17 @@ class boundary():
             if curve.sampling_ratio is None:
                 curve.sampling_ratio = curve.length*(1-cumulative_sampling_ratio)/(self.length-length_fixed_sampling)
 
+        self.adjust_orientation()
+
         if self.multi_connected and dd_partition is None:
             raise ValueError("The domain is multiply-connected and is missing a domain partitioning.")
         if not self.multi_connected and dd_partition is not None:
             raise ValueError("Domain partitioning is not accepted for simply-connected domains.") 
         
+        if self.cracks != [] and dd_partition is None:
+                dd_partition = lambda z: torch.ones([1,z.shape[0]], dtype=torch.bool) # Trivial dd_partition
+        
+        self.n_domains = 1
         if dd_partition is not None:
             if len(inspect.getfullargspec(dd_partition)[0]) == 1:
                 self.dd_partition = dd_partition
@@ -99,8 +117,18 @@ class boundary():
         self.points_train, self.normals_train, self.bc_idxs_train, self.bc_values_train = self.extract_points(self.np_train)
         self.points_test, self.normals_test, self.bc_idxs_test, self.bc_values_test = self.extract_points(self.np_test)  
 
-        if self.multi_connected:
+        if self.multi_connected or dd_partition is not None:
             self.extract_points_dd()
+
+        if self.cracks == [] and enrichment in ["williams","rice"]:
+            raise ValueError(f"Enrichment is {enrichment} but no tips have been added.")
+        if self.cracks != []:
+            if enrichment not in ["williams","rice"]:
+                raise ValueError("Enrichment method must be either 'williams' or 'rice'.")
+            else:
+                self.initialize_cracks()
+
+        self.check_consistency()
 
 
     def extract_points(self, N):
@@ -132,7 +160,7 @@ class boundary():
                 seed = torch.pow(torch.rand(n), curve.order)
             elif (curve.ref_loc=="end"):
                 seed = torch.pow(torch.rand(n), 1./curve.order)
-            points[n0:n0+n], normals[n0:n0+n] = curve.map_point(seed)
+            points[n0:n0+n], normals[n0:n0+n] = curve.map_point(seed.to(nn.device))
             bc_idxs[n0:n0+n] =  self.bc_names.index(curve.bc_name)
             bc_values[n0:n0+n] = curve.bc_value(points[n0:n0+n])
             n0 += n
@@ -160,15 +188,15 @@ class boundary():
         if self.dd_partition == None:
             raise ValueError("'dd_partition' must be initialized before extracting the points in DD.")
         
-        iibc = self.bc_names.index("interface_bc")
+        iibc = self.bc_names.index("interface_bc") if "interface_bc" in self.bc_names else -1
         domains = self.dd_partition(self.points_train)
         n_domains = domains.shape[0]
         max_size = torch.max(domains.sum(1)) # Maximum number of points in a domain
 
-        self.points_train_dd = torch.nan*torch.empty(n_domains, max_size, dtype=self.points_train.dtype)
-        self.normals_train_dd = torch.empty(n_domains, max_size, dtype=self.normals_train.dtype)
-        self.bc_idxs_train_dd = torch.empty(n_domains, max_size, dtype=self.bc_idxs_train.dtype)
-        self.bc_values_train_dd = torch.empty(n_domains, max_size, dtype=self.bc_values_train.dtype)
+        self.points_train_dd = torch.nan*torch.empty(n_domains, max_size, dtype=self.points_train.dtype, device=nn.device)
+        self.normals_train_dd = torch.empty(n_domains, max_size, dtype=self.normals_train.dtype, device=nn.device)
+        self.bc_idxs_train_dd = torch.empty(n_domains, max_size, dtype=self.bc_idxs_train.dtype, device=nn.device)
+        self.bc_values_train_dd = torch.empty(n_domains, max_size, dtype=self.bc_values_train.dtype, device=nn.device)
 
         for d in range(n_domains):
             self.points_train_dd[d,:domains[d,:].sum()] = self.points_train[domains[d,:]]
@@ -195,10 +223,10 @@ class boundary():
         n_domains = domains.shape[0]
         max_size = torch.max(domains.sum(1))
 
-        self.points_test_dd = torch.nan*torch.empty(n_domains, max_size, dtype=self.points_test.dtype)
-        self.normals_test_dd = torch.empty(n_domains, max_size, dtype=self.normals_test.dtype)
-        self.bc_idxs_test_dd = torch.empty(n_domains, max_size, dtype=self.bc_idxs_test.dtype)
-        self.bc_values_test_dd = torch.empty(n_domains, max_size, dtype=self.bc_values_test.dtype)
+        self.points_test_dd = torch.nan*torch.empty(n_domains, max_size, dtype=self.points_test.dtype, device=nn.device)
+        self.normals_test_dd = torch.empty(n_domains, max_size, dtype=self.normals_test.dtype, device=nn.device)
+        self.bc_idxs_test_dd = torch.empty(n_domains, max_size, dtype=self.bc_idxs_test.dtype, device=nn.device)
+        self.bc_values_test_dd = torch.empty(n_domains, max_size, dtype=self.bc_values_test.dtype, device=nn.device)
 
         for d in range(n_domains):
             self.points_test_dd[d,:domains[d,:].sum()] = self.points_test[domains[d,:]]
@@ -272,7 +300,7 @@ class boundary():
         """
         inside = torch.zeros(points.shape, dtype=torch.int8)
         for curve in self.curves:
-            if(not isinstance(curve.bc_type,bc.interface_bc) and curve.on_boundary):
+            if curve.on_boundary:
                 inside += curve.intersect_ray(points)
         return torch.remainder(inside, 2)
 
@@ -292,9 +320,10 @@ class boundary():
         """
         Checks if boundary is formed by a well-defined closed loop, throws a warning otherwise.
         """
-        ord = lambda n: "%d%s" % (n,"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4]) # From https://codegolf.stackexchange.com/questions/4707/outputting-ordinal-numbers-1st-2nd-3rd#answer-4712
         for j, curve1 in enumerate(self.curves):
-            if(not curve1.check_consistency or not curve1.on_boundary):
+            if not curve1.check_consistency:
+                continue
+            if torch.abs(curve1.P1-curve1.P2) < 1e-6: # The curve is already closed
                 continue
             cnt1 = 0
             cnt2 = 0
@@ -302,9 +331,58 @@ class boundary():
                 cnt1 += curve2.is_inside(curve1.P1)
                 cnt2 += curve2.is_inside(curve1.P2)
             if(cnt1==1):
-                warnings.warn("Boundary is not closed, 1st edge of "+ord(j+1)+" curve is not connected to any other edge.") 
+                warnings.warn(f"Boundary is not closed, 1st edge of {utils.ordinal_number(j+1)} curve is not connected to any other edge.", UserWarning) 
             if(cnt2==1):
-                warnings.warn("Boundary is not closed, 2nd edge of "+ord(j+1)+" curve is not connected to any other edge.") 
+                warnings.warn(f"Boundary is not closed, 2nd edge of {utils.ordinal_number(j+1)} curve is not connected to any other edge.", UserWarning) 
+
+
+    def initialize_cracks(self):
+        """
+        Initialization of pihnn.geometries.crack_line within a boundary geometry.
+
+        Specifically, the method detects whether the crack is interior or open and which domain it belongs to.
+        """
+        if self.dd_partition == None:
+            raise ValueError("Cracks can be handled only with DD-PIHNNs.")
+
+        if len(self.cracks) > self.n_domains:
+            raise ValueError("Enrichment works with maximum 1 crack per subdomain.")        
+
+        if self.enrichment == "williams":
+            for crack in self.cracks:
+                for tip in crack.tips:
+                    left_point = tip.coords + 1*(1j*tip.norm)
+                    right_point = tip.coords + 1*(-1j*tip.norm)
+                    domain_left = self.dd_partition(left_point).squeeze(-1).nonzero().item()
+                    domain_right = self.dd_partition(right_point).squeeze(-1).nonzero().item()
+                    tip.domains = [domain_left, domain_right]
+                    if domain_left == domain_right:
+                        raise ValueError(f"Crack tip at coordinates {tip.coords} is entirely in domain {domain_left} but must be shared between 2 subdomains.")
+
+        elif self.enrichment == "rice":
+            for crack in self.cracks:
+                for tip in crack.tips:
+                    tip.domains = self.dd_partition(tip.coords).squeeze(-1).nonzero().item()
+                    tip.branch_cut_rotation = 0*tip.branch_cut_rotation[0]
+                if len(crack.tips)==1:
+                    crack.rice = {
+                        "is_internal": False,
+                        "coords": crack.tips[0].coords,
+                        "angle": crack.tips[0].angle,
+                        "domain": crack.tips[0].domains
+                        }
+                elif len(crack.tips)==2:
+                    crack.rice = {
+                        "is_internal": True,
+                        "coords": (crack.tips[0].coords + crack.tips[1].coords)/2,
+                        "angle": crack.tips[0].angle,
+                        "domain": crack.tips[0].domains
+                        }
+                else:
+                    raise ValueError("Each can crack can have at most 2 crack tips.")
+
+        else:
+            raise ValueError("'enrichment' must be either 'williams' or 'rice'.")
 
 
 
@@ -326,8 +404,8 @@ class curve():
         :type check_consistency: bool
         :param on_boundary: Set to False if the current curve is not really part of the domain boundary.
         :type on_boundary: bool
-        :param sampling_ratio: Number of sampled points on the curve with respect to the total sampled points on the boundary. By default, it's the ratio between the curve length and the boundary perimeter.
-        :type sampling_ratio: float
+        :param sampling_ratio: Number of sampled points on the curve with respect to the total sampled points on the boundary. By default, it's the ratio between the length curve and the boundary perimeter.
+        :type np_train: float
         """
         self.length = None
         self.square = None
@@ -340,6 +418,10 @@ class curve():
         self.check_consistency = check_consistency
         self.on_boundary = on_boundary
         self.sampling_ratio = sampling_ratio
+        self.tips = []
+
+        if isinstance(bc_type, bc.interface_bc):
+            self.on_boundary = False
 
         if isinstance(order, (int,float)):
             if order > 1e-10:
@@ -392,6 +474,33 @@ class curve():
         """
         raise NotImplementedError
 
+
+    def add_crack_tip(self, tip_side=0, branch_cut_rotation=[0.1,-0.1], initial_sif=0.):
+        """
+        Add crack tip for enriched PIHNNs.
+        :param tip_side: Which side to consider for the crack tip, 0 is the starting point of the curve, 1 the end.
+        :type tip_side: bool
+        :param branch_cut_rotation: Rotation of the square root branch cuts with respect to the domain on the left and on the right of the crack, respectively. In radiants and anti-clockwise. Only used for Williams enrichment.
+        :type branch_cut_rotation: list of floats
+        :param initial_sif: Initial values for the trainable stress intensity factors :math:`K_I` and :math:`K_{II}`. Only used for Williams enrichment.
+        :type initial_sif: int/float/complex/list/tuple/tensor
+        """
+        if not tip_side in [0,1]:
+            raise ValueError("tip_side must be a boolean value.")
+
+        close_tip_side = 1e-8
+        if tip_side:
+            close_tip_side = 1. - close_tip_side
+
+        z, n = self.map_point(torch.tensor([float(tip_side)], device=nn.device))
+        zc, _ = self.map_point(torch.tensor([float(close_tip_side)], device=nn.device))
+        
+        n *= 1.j # Rotation of 90 degrees
+        sign = (z-zc).real*n.real + (z-zc).imag*n.imag # Scalar product
+        if sign < 0:
+            n *= -1
+  
+        self.tips.append(crack_tip(z, n, branch_cut_rotation, initial_sif))
 
 
 class line(curve): # Straight line, anti-clockwise with respect to boundary
@@ -599,3 +708,25 @@ class circle(arc):
         :type sampling_ratio: float
         """
         super(circle, self).__init__(center, radius, 0, 2*torch.pi, bc_type, bc_value, order, ref_loc, check_consistency, on_boundary, sampling_ratio)
+
+
+
+class crack_tip():
+    """
+    Object to denote crack tips. Used for enriched networks.
+
+    :param coords: Coordinates of the crack tip.
+    :type coords: int/float/complex/list/tuple/tensor
+    :param norm: Normal outward vector to the tip.
+    :type norm: int/float/complex/list/tuple/tensor
+    :param branch_cut_rotation: Rotation of the square root branch cuts with respect to the domain on the left and on the right of the crack, respectively. In radiants and anti-clockwise. Only used in Williams enrichment.
+    :type branch_cut_rotation: list of float
+    :param initial_sif: Initial values for the trainable stress intensity factors :math:`K_I` and :math:`K_{II}`. Only used in Williams enrichment.
+    :type initial_sif: int/float/complex/list/tuple/tensor
+    """
+    def __init__(self, coords, norm, branch_cut_rotation, initial_sif):
+        self.coords = utils.get_complex_input(coords)
+        self.norm = utils.get_complex_input(norm)
+        self.angle = torch.angle(norm)
+        self.branch_cut_rotation = torch.tensor(branch_cut_rotation, device=nn.device).unsqueeze(1)
+        self.initial_sif = utils.get_complex_input(initial_sif)

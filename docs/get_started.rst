@@ -43,9 +43,9 @@ will run the test on the Laplace equation and provide plots in the ``results`` f
 
 Using CUDA 
 -----------
-It is possible to exploit GPUs for accelerated processing if you have a `CUDA-capable <https://developer.nvidia.com/cuda-zone>`_ system with the `CUDA toolkit <https://developer.nvidia.com/cuda-zone>`_ installed. 
-Furthermore, you need to install the `CUDA enabled PyTorch <https://pytorch.org/get-started/locally/>`_ by running:
+The library supports CUDA processing. If your system is `CUDA-capable <https://developer.nvidia.com/cuda-zone>`_, the code will automatically run on the GPU.
 
-.. code-block:: bash
 
-   conda install pytorch-cuda -c pytorch -c nvidia
+Citation
+---------- 
+If you use PIHNNs for your research, don't forget to cite our works in :doc:`../../publications`.

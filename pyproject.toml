@@ -7,19 +7,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pihnn"
-authors = [
-    {name = "Matteo Calafa'", email = "maca@mpe.au.dk"}
-]
+authors = [{name = "Matteo Calafa'", email = "matcal@dtu.dk"}]
 description = "Physics-informed holomorphic neural networks"
-version = "1.0.0"
+version = "1.1"
 readme = "README.md"
 license = {text = "LGPL-2.1"}
 requires-python = ">=3.10"
-
-dependencies = [
-    "tqdm",
-    "matplotlib>=3.5.0",
-    "numpy>=1.22.0",
-    "torch>=1.11.0",
-    "scipy>=1.9.0"
-]

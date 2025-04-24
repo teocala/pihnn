@@ -1,6 +1,6 @@
 """Instances and methods for boundary conditions."""
 import torch
-import pihnn.utils as utils
+import pihnn.nn as nn
 
 
 def reset_variables():
@@ -20,6 +20,10 @@ class scalar_bc():
     """
     Base abstract class for all the boundary conditions employed in scalar problems (Laplace, biharmonic).
     """
+    def __init__(self):
+        self.scaling_coeff = 1.
+
+
     def __call__(self,z,u,normal,rhs):
         """
         Calculate residual of the boundary condition.
@@ -43,6 +47,10 @@ class linear_elasticity_bc():
     """
     Base abstract class for all the boundary conditions employed in linear elasticity.
     """
+    def __init__(self):
+        self.scaling_coeff = 1.
+
+
     def __call__(self,z,sxx,syy,sxy,ux,uy,normal,rhs):
         """
         Calculate residual of the boundary condition.
@@ -98,7 +106,7 @@ class neumann_bc(scalar_bc):
     def __call__(self,z,u,normal,rhs):
         if 'u_z' not in globals():
             global u_z
-            u_z = utils.derivative(u,z)
+            u_z = nn.derivative(u,z)
         dudN = 2*u_z.real*normal.real - 2*u_z.imag*normal.imag
         return torch.abs(dudN - rhs)
 
@@ -117,7 +125,7 @@ class dirichlet_neumann_bc(scalar_bc):
     def __call__(self,z,u,normal,rhs):
         if 'u_z' not in globals():
             global u_z
-            u_z = utils.derivative(u,z)
+            u_z = nn.derivative(u,z)
         dudn = 2*u_z.real*normal.real - 2*u_z.imag*normal.imag
         return torch.sqrt((u - rhs.real)*(u - rhs.real) + (dudn - rhs.imag)*(dudn - rhs.imag))
     
@@ -136,10 +144,10 @@ class dirichlet_laplace_bc(scalar_bc):
     def __call__(self,z,u,normal,rhs):
         if 'u_z' not in globals():
             global u_z
-            u_z = utils.derivative(u,z)
+            u_z = nn.derivative(u,z)
         if 'u_zzc' not in globals():
             global u_zzc
-            u_zzc = utils.derivative(u_z,z,conjugate=True)
+            u_zzc = nn.derivative(u_z,z,conjugate=True)
         u_laplacian = 4 * u_zzc
         return torch.sqrt((u - rhs.real)*(u - rhs.real) + (u_laplacian - rhs.imag)*(u_laplacian - rhs.imag))
 
@@ -262,7 +270,7 @@ class interface_bc(scalar_bc, linear_elasticity_bc):
         """
         if 'u_z' not in globals():
             global u_z
-            u_z = utils.derivative(u,z)
+            u_z = nn.derivative(u,z)
         dudN = 2*u_z.real*normal.real - 2*u_z.imag*normal.imag
         return torch.sqrt(u*u + dudN*dudN)
 

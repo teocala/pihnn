@@ -2,6 +2,7 @@ Documentation
 ================
 
 This page contains auto-generated API reference documentation.
+We recommend to read the relevant literature in :doc:`../../publications`.
 
 
 Modules

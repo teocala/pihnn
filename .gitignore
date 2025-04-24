@@ -19,3 +19,6 @@ build/*
 
 # Documentation
 docs/_build
+
+# Experiments
+experimental/

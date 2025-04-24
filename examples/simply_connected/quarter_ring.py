@@ -8,7 +8,6 @@ import pihnn.utils as utils
 import pihnn.geometries as geom
 import pihnn.graphics as graphics
 import pihnn.bc as bc
-#torch.manual_seed(0)
 
 # Network parameters 
 n_epochs = 2000 # Number of epochs
@@ -50,7 +49,7 @@ def model_exact (x, y):
     return torch.stack((sigma_xx, sigma_yy, sigma_xy, u_x, u_y))
 
 # Definition of NN
-model = nn.PIHNN('km', units).to(nn.device)
+model = nn.PIHNN('km', units)
 
 if (__name__=='__main__'):
     model.initialize_weights('exp', beta, boundary.extract_points(10*boundary.np_train)[0], gauss)

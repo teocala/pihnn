@@ -38,18 +38,16 @@ line6 = geom.line(P1=[L,-L], P2=[L,L], bc_type=bc.neumann_bc(), bc_value=bc_R)
 line7 = geom.line(P1=[0,-L], P2=[0,L], bc_type=bc.interface_bc())
 
 def dd_partition (x,y): # Domain decomposition partition
-    domains = torch.empty([2,x.shape[0]], dtype=torch.bool)
-    domains[0,:] = (x>=-1e-10)
-    domains[1,:] = (x<=1e-10)
-    return domains
+    return torch.stack([(x>=-1e-10), (x<=1e-10)])
+
 boundary = geom.boundary([line1, line2, line3, line4, line5, line6, line7], np_train, np_test, dd_partition)
 
 # Definition of NN
-model = nn.DD_PIHNN('laplace', units, boundary).to(nn.device)
+model = nn.DD_PIHNN('laplace', units, boundary)
 
 if (__name__=='__main__'):
     model.initialize_weights('exp', beta, boundary.extract_points(10*np_train)[0], gauss)
-    #graphics.plot_training_points(boundary)
+    graphics.plot_training_points(boundary)
     loss_train, loss_test = utils.train(boundary, model, n_epochs, learn_rate, scheduler_apply)
     graphics.plot_loss(loss_train, loss_test)
     tria = graphics.get_triangulation(boundary)

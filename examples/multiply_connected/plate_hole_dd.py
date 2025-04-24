@@ -54,16 +54,17 @@ line13 = geom.line(P1=[0,r], P2=[0,L], bc_type=bc.normal_displacement_bc(), on_b
 line14 = geom.line(P1=[-L,0], P2=[-r,0], bc_type=bc.normal_displacement_bc(), on_boundary=False)
 
 def dd_partition (x,y): # Domain decomposition partition
-    domains = torch.empty([4,x.shape[0]], dtype=torch.bool)
-    domains[0,:] = (x>=-1e-10) & (y>=-1e-10)
-    domains[1,:] = (x<=1e-10) & (y>=-1e-10)
-    domains[2,:] = (x<=1e-10) & (y<=1e-10)
-    domains[3,:] = (x>=-1e-10) & (y<=1e-10)
-    return domains
+    return torch.stack([
+    (x>=-1e-10) & (y>=-1e-10),
+    (x<=1e-10) & (y>=-1e-10),
+    (x<=1e-10) & (y<=1e-10),
+    (x>=-1e-10) & (y<=1e-10)
+    ])
+
 boundary = geom.boundary([line1, line2, line3, line4, line5, line6, line7, line8, line9, line10, line11, line12, line13, line14, arc1, arc2, arc3, arc4], np_train, np_test, dd_partition)
 
 # Definition of NN
-model = nn.DD_PIHNN('km', units, boundary).to(nn.device)
+model = nn.DD_PIHNN('km', units, boundary)
 
 if (__name__=='__main__'):
     model.initialize_weights('exp', beta, boundary.extract_points(10*np_train)[0], gauss)

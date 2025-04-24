@@ -9,10 +9,11 @@ import pihnn.utils as utils
 import os, inspect
 mpl.rcParams['mathtext.fontset'] = 'stix'
 mpl.rcParams['font.family'] = 'STIXGeneral'
+mpl.use('Agg') 
 
 
 
-def get_triangulation(boundary, n_points_interior=1000, n_points_boundary=500):
+def get_triangulation(boundary, n_points_interior=5000, n_points_boundary=1000):
     """
     Create a 2D mesh/triangulation from the definition of geometry. Useful for :func:`pihnn.graphics.plot_sol`.
 
@@ -24,14 +25,16 @@ def get_triangulation(boundary, n_points_interior=1000, n_points_boundary=500):
     :type n_points_exterior: int 
     :returns: **tria** (:class:`matplotlib.tri.Triangulation`) - Domain triangulation/mesh.
     """
-    points_B = boundary.extract_points(n_points_boundary)[0].cpu()
-    points_I = torch.tensor(np.random.uniform(boundary.square[0],boundary.square[1],n_points_interior) + 1.j*np.random.uniform(boundary.square[2],boundary.square[3],n_points_interior))
+    points_B = boundary.extract_points(n_points_boundary)[0]
+    points_I_x = torch.rand(n_points_interior, device=nn.device)*(boundary.square[1]-boundary.square[0]) + boundary.square[0]
+    points_I_y = torch.rand(n_points_interior, device=nn.device)*(boundary.square[3]-boundary.square[2]) + boundary.square[2]
+    points_I = points_I_x+1j*points_I_y
     points_I = points_I[boundary.is_inside(points_I)==1]
-    mesh = torch.cat((points_B, points_I))
+    mesh = torch.cat((points_B, points_I)).cpu()
 
     tria = mpl.tri.Triangulation(mesh.real, mesh.imag)
-    barycenter = mesh[tria.triangles].sum(dim=1) / 3.
-    tria.set_mask(boundary.is_inside(barycenter)==0)
+    barycenter = mesh[tria.triangles].sum(dim=1).to(nn.device) / 3.
+    tria.set_mask((boundary.is_inside(barycenter)==0).cpu())
 
     return tria
 
@@ -272,6 +275,15 @@ def plot_stresses(triangulation, model, model_true=None, format="png", dir="resu
     names_txt = ["sxx", "syy", "sxy", "ux", "uy"]
     names_latex = ["$\sigma_{xx}$", "$\sigma_{yy}$", "$\sigma_{xy}$", "$u_x$", "$u_y$"]
 
+    if isinstance(model, nn.enriched_PIHNN) and kwargs.get('apply_crack_bounds', 0):
+        for crack in model.cracks:
+            for tip in crack.tips:
+                C = torch.sqrt(torch.abs(z.detach()-tip.coords)) / torch.max(torch.sqrt(torch.abs(z.detach()-tip.coords)))
+                for i in range(3):
+                    vars_NN[i] *= C.cpu()
+                    if model_true is not None:
+                        vars_true[i] *= C.cpu()
+
     if(not split):
         if(figsize is None):
             if  model_true is not None:
@@ -336,8 +348,8 @@ def plot_training_points(boundary, format="png", dir="results/", figsize=(8,8), 
     :type markersize: float
     """
     points, _, bc_idxs, _ = boundary("training")
-    points = points.cpu()
-    bc_idxs = bc_idxs.cpu()
+    points = points.cpu().detach()
+    bc_idxs = bc_idxs.cpu().detach()
 
     plt.figure(figsize=figsize) 
     for i in range(len(boundary.bc_names)):
@@ -356,15 +368,15 @@ def plot_training_points(boundary, format="png", dir="results/", figsize=(8,8), 
     plt.close()
     print("# Saved plot of training points at "+os.path.abspath(dir+"points_bc."+format))
 
-    if boundary.dd_partition is not None:
-        domains = boundary.dd_partition(points)
+    if boundary.dd_partition is not None and boundary.n_domains > 1:
+        domains = boundary.dd_partition(points).cpu()
         plt.figure(figsize=figsize)
         for i in range(boundary.n_domains):
             points_d = points[(domains[i,:]==1) & (torch.sum(domains, dim=0)==1)]
             plt.plot(points_d.real, points_d.imag, "x", markersize=markersize, label="Domain "+str(i))
             for j in range(i+1,boundary.n_domains):
                 points_d = points[(domains[i,:]==1) & (domains[j,:]==1)]
-                if(points_d.nelement() != 0):
+                if points_d.nelement() != 0:
                     plt.plot(points_d.real, points_d.imag, "x", markersize=markersize, label="Interface domains "+str(i)+","+str(j))
         plt.legend()
         plt.xlabel(r"$x$")
@@ -373,3 +385,91 @@ def plot_training_points(boundary, format="png", dir="results/", figsize=(8,8), 
         plt.savefig(dir+"points_dd."+format)
         plt.close()
         print("# Saved plot of domain partitioning at "+os.path.abspath(dir+"points_dd."+format))
+
+
+def plot_dem(model, crack, tip, max_distance, n_points=100, figsize=None, format='png', dir='results/', markersize=2):
+    """
+    Calculate and plot stress intensity factors (SIFs) from displacement extrapolation method (DEM).
+
+    :param model: Neural network model, the function is meaningful only if model.PDE is either 'km' or 'km-so'.
+    :type model: :class:`pihnn.nn.PIHNN`/:class:`pihnn.nn.DD_PIHNN`
+    :param crack: Curve corresponding to the crack to analyse.
+    :type crack: class:`pihnn.geometries.crack_line`
+    :param tip: Crack tip associated to the SIF.
+    :type tip: class:`pihnn.geometries.crack_tip`
+    :param max_distance: Maximum distance from the crack tip to consider in the DEM regression.
+    :type max_distance: float
+    :param n_points: Number of points to consider in the DEM regression.
+    :type n_points: int
+    :param figsize: Size of the :class:`matplotlib.pyplot.figure`.
+    :type figsize: tuple of float 
+    :param format: Format of the saved figure.
+    :type format: str
+    :param dir: Directory where to save the figure.
+    :type dir: str
+    :param markersize: Size of the marker that is used to plot a point.
+    :type markersize: float
+
+    :returns: 
+        - **sif_I_ext** (float) - Evaluation of the extrapolated :math:`K_I` stress intensity factor.
+        - **sif_II_ext** (float) - Evaluation of the extrapolated :math:`K_{II}` stress intensity factor.
+    """
+    l = torch.linspace(0, 1, n_points)
+    P = tip.P
+    z,_ = crack.map_point(l)
+    idx = torch.where(torch.abs(z-P)<max_distance)[0]
+    if torch.abs(z[0]-P) < 1e-5: # The crack tip coincides with the beginning of the crack line
+        a1 = 0
+        a2 = idx[-1]/n_points
+        z,n = crack.map_point(torch.linspace(a1,a2,n_points)) # First point is next to tip, last point is at max_distance
+    else: # The crack tip coincides with the end of the crack line
+        a1 = 1
+        a2 = idx[0]/n_points
+        z,n = crack.map_point(torch.linspace(a1,a2,n_points)) # First point is next to tip, last point is at max_distance
+    z = z[1:] # Remove first point to avoid NaNs
+    n = n[1:]
+    l = l[1:]
+    N = n_points-1
+    zz = torch.empty([2*N])*1.j
+    nn = torch.cat((n,n))
+    zz[:N] = z + 1e-6*n
+    zz[N:] = z - 1e-6*n
+    _,_,_,ux,uy = model(zz.requires_grad_(True), real_output=True)
+    un = ux*nn.real + uy*nn.imag
+    up = ux*nn.imag - uy*nn.real
+
+    sif_I = (un[:N]-un[N:]).detach() * torch.sqrt(2*torch.pi/torch.abs(P-z))*model.material['mu']/(model.material['km_gamma']+1)
+    sif_II = (up[:N]-up[N:]).detach() * torch.sqrt(2*torch.pi/torch.abs(P-z))*model.material['mu']/(model.material['km_gamma']+1)
+    slope_I = torch.median((sif_I-sif_I[-1])/l) # Average slope from linear regression
+    slope_II = torch.median((sif_II-sif_II[-1])/l)
+    sif_I_ext = slope_I + sif_I[-1] # Extrapolated SIF
+    sif_II_ext = slope_II + sif_II[-1]
+
+    if (figsize is not None):
+        plt.figure(figsize=figsize)
+    else:
+        plt.figure()
+    plt.plot(max_distance*l, sif_I, 'r*', label=r"$K_I$", markersize=markersize)
+    plt.plot(max_distance*l, slope_I*(1-l) + sif_I[-1], 'b-', label=r"$K_I$ from DEM")
+    plt.legend()
+    plt.xlabel('Distance from crack tip')
+    plt.ylabel(r'$K_I$')
+    plt.tight_layout()
+    plt.savefig(dir+"dem_i."+format)
+    plt.close()
+
+    if (figsize is not None):
+        plt.figure(figsize=figsize)
+    else:
+        plt.figure()
+    plt.plot(max_distance*l, sif_II, 'r*', label=r"$K_{II}$", markersize=markersize)
+    plt.plot(max_distance*l, slope_II*(1-l) + sif_II[-1], 'b-', label=r"$K_{II}$ from DEM")
+    plt.legend()
+    plt.xlabel('Distance from crack tip')
+    plt.ylabel(r'$K_{II}$')
+    plt.tight_layout()
+    plt.savefig(dir+"dem_ii."+format)
+    plt.close()
+
+    print("# Saved plots of DEM at "+os.path.abspath(dir))
+    return sif_I_ext, sif_II_ext

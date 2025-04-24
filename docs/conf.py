@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'PIHNN'
-copyright = '2024, Matteo Calafà'
+copyright = '2025, Matteo Calafà'
 author = 'Matteo Calafà'
 
 # -- General configuration ---------------------------------------------------
@@ -35,9 +35,6 @@ html_show_sourcelink = False
 html_logo = "https://matteocalafa.com/images/pihnn-logo.svg"
 html_favicon = "https://matteocalafa.com/images/pihnn-logo-small.svg"
 html_theme_options = {
-  "external_links": [
-      {"name": "Paper", "url": "https://doi.org/10.1016/j.cma.2024.117406"},
-  ],
   "icon_links": [
         {
             "name": "GitHub",
@@ -49,6 +46,9 @@ html_theme_options = {
    # Note we have omitted `theme-switcher` below
    "navbar_end": ["navbar-icon-links"],
    "navbar_persistent": ["search-button"]
+}
+html_sidebars = {
+    '**': ['globaltoc.html', 'sourcelink.html', 'searchbox.html']
 }
 html_context = {
    "default_mode": "light"
