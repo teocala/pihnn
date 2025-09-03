@@ -424,7 +424,7 @@ def train(boundary, model, n_epochs, learn_rate=1e-3, scheduler_apply=[], schedu
 
     loss = np.column_stack((loss_epochs, loss_epochs_test))
     if dir[-1] != "/":
-        dir = dir.append("/")
+        dir = dir + "/"
     if not os.path.exists(dir):
         os.mkdir(dir)
         print("# Created path "+os.path.abspath(dir))
