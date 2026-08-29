@@ -298,7 +298,7 @@ class boundary():
         :type points: :class:`torch.tensor`
         :returns: **inside** (:class:`torch.tensor`) - For each input point, True if it is inside and False if it outside.
         """
-        inside = torch.zeros(points.shape, dtype=torch.int8)
+        inside = torch.zeros(points.shape, dtype=torch.int8, device=nn.device)
         for curve in self.curves:
             if curve.on_boundary:
                 inside += curve.intersect_ray(points)
@@ -554,7 +554,7 @@ class line(curve): # Straight line, anti-clockwise with respect to boundary
 
 
     def intersect_ray(self, points):
-        output = torch.ones(points.shape, dtype=torch.bool)
+        output = torch.ones(points.shape, dtype=torch.bool, device=nn.device)
         output[points.imag>torch.max(self.P1.imag,self.P2.imag)+1e-10] = False
         output[points.imag<torch.min(self.P1.imag,self.P2.imag)-1e-10] = False
         dir1 = 1.j * (self.P2 - self.P1) # Orthogonal vector to the line.
@@ -642,7 +642,7 @@ class arc(curve): # Arc of circumference, anti-clockwise with respect to boundar
         # The problem is that arcs on the left and arcs on the right of the circle define different conditions.
         # So, we split the total arc in left and right sub-arcs and we apply the condition separately.
         # See https://stackoverflow.com/questions/48055362/looking-for-algorithm-that-will-determine-if-a-point-is-to-the-left-right-of-an
-        output = torch.zeros(points.shape, dtype=torch.int8)
+        output = torch.zeros(points.shape, dtype=torch.int8, device=nn.device)
         tm = torch.minimum(self.theta1, self.theta2)
         tM = torch.maximum(self.theta1, self.theta2)
 

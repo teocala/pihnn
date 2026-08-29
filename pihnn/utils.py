@@ -136,9 +136,9 @@ def PIHNNloss(boundary, model, t):
     :type t: str
     :returns: **loss** (float) - Computed loss.
     """
-    if(model.PDE == 'laplace' or model.PDE == 'biharmonic'):
+    if model.PDE in ['laplace', 'biharmonic']:
         return scalar_loss(boundary, model, t)
-    elif(model.PDE == 'km' or model.PDE == 'km-so'):
+    elif model.PDE in ['km', 'km-so']:
         return km_loss(boundary, model, t)
     else:
         raise ValueError("'model.PDE' must be either 'laplace', 'biharmonic', 'km' or 'km-so'.")
@@ -161,7 +161,7 @@ def scalar_loss(boundary, model, t):
     else:
         z, normals, bc_idxs, bc_values = boundary(t)
 
-    if model.PDE in ['laplace','biharmonic']:
+    if model.PDE in ['laplace', 'biharmonic']:
         u = model(z.requires_grad_(True), real_output=True)
     else:
         raise ValueError("'model.PDE' must be 'laplace' or 'biharmonic' for this type of loss.")
@@ -424,7 +424,7 @@ def train(boundary, model, n_epochs, learn_rate=1e-3, scheduler_apply=[], schedu
 
     loss = np.column_stack((loss_epochs, loss_epochs_test))
     if dir[-1] != "/":
-        dir = dir + "/"
+        dir = dir.append("/")
     if not os.path.exists(dir):
         os.mkdir(dir)
         print("# Created path "+os.path.abspath(dir))
@@ -450,7 +450,7 @@ def RAD_sampling(boundary, model, fine_grid=10000):
     z, normals, bc_idxs, bc_values = boundary.extract_points(fine_grid)
     epsilon = torch.zeros_like(z, dtype=torch.float64)
     
-    idx = torch.tensor([], dtype=bc_idxs.dtype)
+    idx = torch.tensor([], dtype=bc_idxs.dtype, device=nn.device)
 
     for j,bc_type in enumerate(boundary.bc_types):
         if(model.PDE == 'laplace' or model.PDE == 'biharmonic'):
@@ -497,9 +497,9 @@ def compute_Lp_error(triangulation, model, model_true, p=2):
         vars = model(z, real_output=True).detach().cpu()
     else:
         if len(inspect.getfullargspec(model)[0]) == 1: # Check if it's a scalar complex function
-            vars = model(z.detach().cpu())
+            vars = model(z.detach().cpu()).cpu()
         elif len(inspect.getfullargspec(model)[0]) == 2: # Check if it's a function with two scalar inputs
-            vars = model(z.real.detach().cpu(), z.imag.detach().cpu())
+            vars = model(z.real.detach().cpu(), z.imag.detach().cpu()).cpu()
         else:
             raise ValueError("'model' must be a function with a scalar complex input or 2D real inputs.")
 
@@ -507,9 +507,9 @@ def compute_Lp_error(triangulation, model, model_true, p=2):
         vars_true = model_true(z, real_output=True).detach().cpu()
     else:
         if len(inspect.getfullargspec(model_true)[0]) == 1: # Check if it's a scalar complex function
-            vars_true = model_true(z.detach().cpu())
+            vars_true = model_true(z.detach().cpu()).cpu()
         elif len(inspect.getfullargspec(model_true)[0]) == 2: # Check if it's a function with two scalar inputs
-            vars_true = model_true(z.real.detach().cpu(), z.imag.detach().cpu())
+            vars_true = model_true(z.real.detach().cpu(), z.imag.detach().cpu()).cpu()
         else:
             raise ValueError("'model_true' must be a function with a scalar complex input or 2D real inputs.")
 
