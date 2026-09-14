@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'PIHNN'
-copyright = '2025, Matteo Calafà'
+copyright = '2026, Matteo Calafà'
 author = 'Matteo Calafà'
 
 # -- General configuration ---------------------------------------------------

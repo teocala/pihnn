@@ -19,6 +19,15 @@ Enriched PIHNNs
 - **Year of publication**: 2025
 - **DOI**: 10.1016/j.engfracmech.2025.111133
 
+PIHKANs and L-PIHNNs
+--------------------
+
+- **Title**: `A holomorphic Kolmogorov-Arnold network framework for solving elliptic problems on arbitrary 2D domains <https://doi.org/10.1007/s44379-026-00094-8>`_
+- **Authors**: Matteo Calafà, Tito Andriollo, Allan P. Engsig-Karup, Cheol-Ho Jeong
+- **Published in**: Machine Learning for Computational Science and Engineering
+- **Year of publication**: 2026
+- **DOI**: 10.1007/s44379-026-00094-8
+
 This research was supported by the Aarhus University Research Foundation, Denmark.
 
 .. note::

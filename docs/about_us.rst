@@ -5,11 +5,11 @@ The code is developed by `Matteo Calafà <https://matteocalafa.com>`_, PhD at DT
 
 Research on PIHNNs has been carried out with the collaboration of:
 
-* `Tito Andriollo <https://pure.au.dk/portal/en/persons/titoan@mpe.au.dk>`_, Assistant Professor at Aarhus University.
+* `Tito Andriollo <https://pure.au.dk/portal/en/persons/titoan@mpe.au.dk>`_, Associate Professor at Aarhus University.
 * `Allan P. Engsig-Karup <https://orbit.dtu.dk/en/persons/allan-peter-engsig-karup>`_, Associate Professor at DTU.
 * `Emil Hovad <https://orbit.dtu.dk/en/persons/emil-hovad>`_, Postdoc at DTU.
 * `Henrik Myhre Jensen <https://pure.au.dk/portal/en/persons/hmj%40mpe.au.dk>`_, Professor at Aarhus University.
-
+* `Cheol-Ho Jeong <https://orbit.dtu.dk/en/persons/cheol-ho-jeong/>`_, Associate Professor at DTU.
 
 This project is supported by the Aarhus University Research Foundation, Denmark.
 

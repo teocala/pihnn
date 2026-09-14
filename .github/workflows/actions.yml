@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"] #, "3.11", "3.12"]
+        python-version: ["3.12"]
         os: [ubuntu-latest] #, window-latest, macos-12]  # macos-latest doesn't have anaconda yet.
     
     steps:
@@ -62,9 +62,19 @@ jobs:
           $CONDA/envs/pihnn-env/bin/python3 examples/cracks/straight_crack_rice.py
           mv results/loss.dat results/loss7.dat
 
+      - name: Run laplace_L.py
+        run: | 
+          $CONDA/envs/pihnn-env/bin/python3 examples/simply_connected/laplace_L.py
+          mv results/loss.dat results/loss8.dat
+
+      - name: Run plate_hole_laurent.py
+        run: | 
+          $CONDA/envs/pihnn-env/bin/python3 examples/multiply_connected/plate_hole_laurent.py
+          mv results/loss.dat results/loss9.dat
+
       - name: Print tests results 
         run: |
           $CONDA/envs/pihnn-env/bin/python3 -c "
           import numpy
-          exp = [1e-5, 1e-4, 5e-4, 2e-5, 1e-3, 1e-2, 1e-2]
-          for i in range(1,8): loss = numpy.loadtxt('results/loss'+str(i)+'.dat'); print('Loss test ' + str(i) + ': ' + str(numpy.min(loss[:,1])) + ' (expected < ' + str(exp[i-1]) + ')')"
+          exp = [1e-5, 1e-4, 5e-4, 2e-5, 1e-3, 1e-2, 1e-2, 1e-5, 1e-4]
+          for i in range(1,10): loss = numpy.loadtxt('results/loss'+str(i)+'.dat'); print('Loss test ' + str(i) + ': ' + str(numpy.min(loss[:,1])) + ' (expected < ' + str(exp[i-1]) + ')')"

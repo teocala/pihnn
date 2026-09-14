@@ -4,7 +4,7 @@
 
 <p align="center">
 <a href="https://github.com/teocala/pihnn/actions"><img src="https://github.com/teocala/pihnn/actions/workflows/actions.yml/badge.svg" /></a>
-<a href="https://github.com/teocala/pihnn"><img src="https://matteocalafa.com/badges/PIHNN-version1.1.svg" /></a>
+<a href="https://github.com/teocala/pihnn"><img src="https://matteocalafa.com/badges/PIHNN-version1.2.svg" /></a>
 <a href="https://matteocalafa.com/PIHNN"><img src="https://matteocalafa.com/badges/PIHNN-doc.svg" /></a>
 <a href="https://doi.org/10.1016/j.cma.2024.117406"><img src="https://matteocalafa.com/badges/PIHNN-cite.svg" /></a>
 <a href="https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"><img src="https://matteocalafa.com/badges/PIHNN-license.svg" /></a>
@@ -12,7 +12,7 @@
 
 PIHNNs can be used to efficiently learn solutions of PDEs exploiting their holomorphic representation.  
 
-Written by [Matteo Calafà](https://matteocalafa.com/), former research assistant at [Aarhus University](https://mpe.au.dk/en/), and supported by the Aarhus University Research Foundation.
+Written by [Matteo Calafà](https://matteocalafa.com/), former research assistant at [Aarhus University](https://mpe.au.dk/en/) and currently PhD at [Technical University of Denmark](https://electro.dtu.dk/research/research-areas/electro-technology/acoustic-technology).
 
 Documentation
 --------------

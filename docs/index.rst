@@ -5,7 +5,7 @@
 Implementation and application of physics-informed holomorphic neural networks (PIHNNs, `Calafà et al. [2024] <https://doi.org/10.1016/j.cma.2024.117406>`_) to the Laplace, biharmonic and plane linear elasticity equations.
 
 .. note::
-   The new version now includes enriched PIHNNs for crack problems (`Calafà et al. [2025] <https://doi.org/10.1016/j.engfracmech.2025.111133>`_).
+   The new version now includes PIHKANs and Laurent PIHNNs (`Calafà et al. [2026] <https://doi.org/10.1007/s44379-026-00094-8>`_).
 
 ..  youtube:: 37mDjIVfSho
    :align: center
